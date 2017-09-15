@@ -45,7 +45,7 @@ xclean = exp(e1*ts)*f1.' + exp(e2*ts)*f2.' + exp(e3*ts)*f3.';
 # actually pretty challenging)
 
 sigma = 1e-12;
-delta = 0.5
+delta = 0.01
 xdata = xclean + sigma*(randn(size(xclean))+im*randn(size(xclean)));
 
 ## compute modes in various ways
