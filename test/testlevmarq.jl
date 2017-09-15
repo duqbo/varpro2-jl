@@ -9,6 +9,11 @@ function fun1!(f,x,xpts)
     return
 end
 
+function res1!(res,x,fun!,ydata)
+    fun!(res,x)
+    copy!(res,ydata-res)
+end
+
 function jac1!(jacmat,x,xpts)
     a = x[1]; b = x[2]
     jacmat[:,1] = cos(b*xpts) + b*xpts.*cos(a*xpts)
@@ -25,13 +30,16 @@ delta = 1.0e-1
 xpts = linspace(0,2*pi,npts)
 yclean = zeros(Complex{Float64},xpts)
 
-fun1!(yclean,x,xpts)
+fun! = (f,x) -> fun1!(f,x,xpts)
+
+fun!(yclean,x)
 y = yclean + sigma*randn(size(yclean))
 
 # set up solver and call
 
 x_init = x + delta*randn(size(x))
-fun! = (f,x) -> fun1!(f,x,xpts)
+
+res! = (res,x) -> res1!(res,x,fun!,y)
 jac! = (jacmat,x) -> jac1!(jacmat,x,xpts)
 
 y_init = zeros(y)
@@ -40,7 +48,7 @@ fun!(y_init,x_init)
 println("starting err : ",vecnorm(y_init-y)/vecnorm(y))
 
 opts = LevMarqOpts(rel_tol=1.0e-16)
-rslt = levmarq(x_init,y,fun!,jac!,opts)
+rslt = levmarq(x_init,y,res!,jac!,opts)
 
 xfound = rslt.minimizer
 

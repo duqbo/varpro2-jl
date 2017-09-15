@@ -72,30 +72,34 @@ function LevMarqResultInit(x_init,maxiter::Integer,
     
 end
 
-function levmarq(x_init,y,fun!,jac!,
+function levmarq(x_init,y,res!,jac!,
                  opts::LevMarqOpts=LevMarqOpts())
 
     #
     # This function applies the Levenberg Marquardt
     # iteration to the initial value x_init for the
-    # problem specified by y, fun! and jac!.
+    # problem specified by y, res! and jac!.
     #
     # The iteration finds a local solution to the
     # problem:
     #
-    #    min_x vecnorm(y-x)
+    #    min_x vecnorm(y-f(x))
     #
     # Input:
     #
     # x_init - array, initial guess
     # y - array, target output
-    # fun! - function of two parameters (f,x)
-    #        for input x, writes output to vector f
+    # res! - function of two parameters (res,x)
+    #        for input x, writes output to vector res
+    #        corresponding to the residual y-f(x)
+    #        for that input x
     # jac! - function of two parameters (jac,x)
-    #        for input x, writes output to matrix jac
-    #        such that the (i,j)th entry of jac is the
-    #        derivative of the ith output of fun! with
-    #        respect to the jth component of x
+    #        for the inputs res and x, writes output
+    #        to matrix jac such that the (i,j)th
+    #        entry of jac is the derivative of the
+    #        ith output of fun! with respect to the
+    #        jth component of x. on input res is the
+    #        current residual y-f
     # opts - structure containing the optimization
     #        options. See LevMarqOpts type for
     #        details
@@ -149,18 +153,20 @@ function levmarq(x_init,y,fun!,jac!,
     tau = zeros(Complex{Float64},min(m,n))
     scales = zeros(Float64,n)
     rjac = zeros(Complex{Float64},m,n)
-    jacmod = zeros(Complex{Float64},m+n,n)
-    jacmodtop = view(jacmod,1:m,1:n)
-    jacmodbot = view(jacmod,m+1:m+n,1:n)
+    rjactop = view(rjac,1:n,1:n)
+    jacmod = zeros(Complex{Float64},2*n,n)
+    jacmodtop = view(jacmod,1:n,1:n)
+    jacmodbot = view(jacmod,n+1:2*n,1:n)
     rhs = zeros(Complex{Float64},m+n)
-    rhstop = view(rhs,1:m)
-    rhsbot = view(rhs,m+1:m+n)
-    delta = copy(rhs)
+    rhstopm = view(rhs,1:m)
+    rhstopn = view(rhs,1:n)
+    delta = zeros(Complex{Float64},2*n)
+    deltatop = view(delta,1:n)
+    deltabot = view(delta,n+1:2*n)
 
     # get residual
     
-    fun!(fvec,x)
-    res = y-fvec
+    res!(res,x)
     normres = vecnorm(res)
     errlast = normres/normy
 
@@ -200,18 +206,18 @@ function levmarq(x_init,y,fun!,jac!,
         LAPACK.geqp3!(jacmat,jpvt,tau)
         copy!(rjac,jacmat)
         triu!(rjac)
-        copy!(rhstop,res)
-        LAPACK.ormqr!('L','C',jacmat,tau,rhstop) # Q'*res
-        fill!(rhsbot,0.0) # rhs = [Q'*res; 0]
+        copy!(rhstopm,res)
+        LAPACK.ormqr!('L','C',jacmat,tau,rhstopm) # Q'*res
         
         # check if current step size or shrunk version works
         
         # get step
         
-        copy!(delta,rhs)
-        copy!(jacmodtop,rjac)
+        copy!(deltatop,rhstopn)
+        fill!(deltabot,0.0)
+        copy!(jacmodtop,rjactop)
         copy!(jacmodbot,lambda*diagm(scales[jpvt[1:n]]))
-        levmarq_solve_special!(jacmod,delta)
+        LAPACK.gels!('N',jacmod,delta)
         
         # new guess = x  - delta (be sure to unscramble delta)
 
@@ -221,8 +227,7 @@ function levmarq(x_init,y,fun!,jac!,
         
         # corresponding residual
         
-        fun!(res0,x0)
-        res0 = y-res0
+        res!(res0,x0)
         normres0 = vecnorm(res0)
         err0 = normres0/normy
         
@@ -236,10 +241,11 @@ function levmarq(x_init,y,fun!,jac!,
 
             # get step
             
-            copy!(delta,rhs)
-            copy!(jacmodtop,rjac)
+            copy!(deltatop,rhstopn)
+            fill!(deltabot,0.0)
+            copy!(jacmodtop,rjactop)
             copy!(jacmodbot,lambda1*diagm(scales[jpvt[1:n]]))
-            levmarq_solve_special!(jacmod,delta)
+            LAPACK.gels!('N',jacmod,delta)
             
             # new guess = x  - delta (be sure to unscramble delta)
 
@@ -249,8 +255,7 @@ function levmarq(x_init,y,fun!,jac!,
 
             # corresponding residual
             
-            fun!(res1,x1)
-            res1 = y-res1
+            res!(res1,x1)
             normres1 = vecnorm(res1)
             err1 = normres1/normy
             
@@ -278,10 +283,11 @@ function levmarq(x_init,y,fun!,jac!,
 
                 # get step
                 
-                copy!(delta,rhs)
-                copy!(jacmodtop,rjac)
+                copy!(deltatop,rhstopn)
+                fill!(deltabot,0.0)
+                copy!(jacmodtop,rjactop)
                 copy!(jacmodbot,lambda*diagm(scales[jpvt[1:n]]))
-                levmarq_solve_special!(jacmod,delta)
+                LAPACK.gels!('N',jacmod,delta)
                 
                 # new guess = x  - delta (be sure to unscramble delta)
 
@@ -291,8 +297,7 @@ function levmarq(x_init,y,fun!,jac!,
 
                 # corresponding residual
                 
-                fun!(res0,x0)
-                res0 = y-res0
+                res!(res0,x0)
                 normres0 = vecnorm(res0)
                 err0 = normres0/normy
                 
@@ -372,51 +377,5 @@ if (ifprint)
 end
 
 return rslt
-
-end
-
-
-function levmarq_solve_special!(A,b)
-    # VARPRO2_SOLVE_SPECIAL Solves a system of the form 
-    # 
-    #     [ R ] 
-    #     [---] x = b   
-    #     [ D ] 
-    # 
-    # Where R is upper triangular and D is 
-    # diagonal, using orthogonal reflectors as 
-    # described in:
-    #
-    # Gene H. Golub and V. Pereyra, 'The Differentiation of 
-    #   Pseudo-inverses and Nonlinear Least Squares Problems 
-    #   Whose Variables Separate,' SIAM J. Numer. Analysis 10, 
-    #   413-432 (1973).
-    #
-    # Fill-in is reduced for such a system. This
-    # routine does not pivot
-    #
-    # This routine overwrites A and b
-    #       
-
-    mpn, n = size(A)
-    m = mpn-n
-
-    for i = 1:n
-        ind = vcat(i, m+1:m+i)
-        u = copy(A[ind,i])
-        sigma =  vecnorm(u)
-        beta = 1/(sigma*(sigma+abs(u[1])))
-        u[1] = sign(u[1])*(sigma+abs(u[1]))
-        A[ind,i:end] = A[ind,i:end]-beta*u*(u'*A[ind,i:end])
-        b[ind] = b[ind]-beta*u*dot(u,b[ind])
-    end
-
-    Atop = view(A,1:n,1:n)
-    triu!(Atop)
-    btop = view(b,1:n)
-
-    LAPACK.trtrs!('U','N','N',Atop,btop)
-
-    return
 
 end
