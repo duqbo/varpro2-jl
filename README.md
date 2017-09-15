@@ -1,3 +1,6 @@
+CURRENTLY THIS README IS A LIE... WORK IN PROGRESS
+
+
 # varpro2-julia
 
 A reasonably fast Julia implementation of the variable
@@ -40,15 +43,11 @@ algorithm and an explicit formula for the Jacobian.
 Note that as the problem may be nonconvex, what the
 algorithm finds is a local minimum.
 
-## Set-up
-
-
-
 ## How to use
 
 If you'd like to see how to use VARPRO2
 the best place to start is to check out simple_example.jl
-(in "examples" folder)
+(in "example" folder)
 
 ## Updates
 
@@ -57,7 +56,7 @@ the issues tab on GitHub.
 
 ## Citing this software
 
-We ask that you cite this software 
+We ask that you cite this software [![DOI](https://zenodo.org/badge/101695637.svg)](https://zenodo.org/badge/latestdoi/101695637) 
 and the original Golub and LeVeque paper (see above) 
 if you use this software as part of academic research.
 
