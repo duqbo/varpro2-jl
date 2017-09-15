@@ -1,5 +1,5 @@
-CURRENTLY THIS README IS A LIE... WORK IN PROGRESS
-
+Documentation coming! This software is pretty 
+early days...
 
 # varpro2-julia
 
@@ -46,7 +46,7 @@ algorithm finds is a local minimum.
 ## How to use
 
 If you'd like to see how to use VARPRO2
-the best place to start is to check out simple_example.jl
+the best place to start is to check out testdmd.jl
 (in "example" folder)
 
 ## Updates
