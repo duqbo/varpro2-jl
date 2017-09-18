@@ -181,7 +181,7 @@ function jac_varpro2_slab!(jacmat,alpha,pars::VarPro2Params,
         l = dphi!(dphislab,islab,alpha,i)
         dphislabv = view(dphislab,:,1:l); islabv = view(islab,1:l)
         btslabv = view(btslab,:,1:l)
-        vctslabv = view(vctslab,:,1:l)
+        vctslabv = view(vctslab,1:r,1:l)
         copy!(btslabv,transpose(b[islabv,:]))
         copy!(vctslabv,vct[:,islabv])
 
@@ -313,7 +313,6 @@ function varpro2(pars,alpha_init,phi!,dphi!;
 
     jactemp = zeros(Complex{Float64},is*m,ia)
     jac!(jactemp,alpha_init)
-    println("norm ",norm(jactemp))
 
     # call Levenberg Marquardt routine
 

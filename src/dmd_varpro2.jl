@@ -12,7 +12,7 @@ end
 function dphidmd_slab!(dphislab,islab,alpha,i,t)
     l = 1
     dphislab[:,1] = t.*exp(alpha[i]*t)
-    islab[1] = 1
+    islab[1] = i
     
     return l
 end
